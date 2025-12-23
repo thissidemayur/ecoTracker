@@ -59,6 +59,94 @@ class AuthService {
   }
 
 
+  /**
+   * @description Genereate new access and refresh tokens, hashes the refresh token and save in DB
+   * @params {User} user - Mongoose user document
+   * @return {Promise<Object>} genereated {accessToken, accessTokenExpire, refreshToken}
+   */
+  async generateAndSaveTokens(user) {
+    const tokenPayload = {
+      userId:user._id,
+      role:user.role
+    }
+
+    // genereate tokens (Access and refresh)
+    const { token: accessToken, expiresIn: accessTokenExpire } = jwtService.generateToken(tokenPayload,"access")
+    const {token:refreshToken,expiresIn:refershTokenexpire} = jwtService.generateToken(tokenPayload,"refresh")
+
+    //  create refreshToken hash  and save in db
+    const refreshTokenHash = await bcryptService.hash(refreshToken)
+    await userRepository.updateRefreshTokenHash(user._id, refreshTokenHash)
+
+    
+    return {
+      accessToken,
+      accessTokenExpire,
+      refreshToken
+    }
+  }
+
+  /**
+   * @description: refreshing tokens with rotating and reuse detection
+   * @params {string} oldRefreshToken - refresh token sent by client
+   * @return {Promise<object>} - new access , refresh tokens and user info with userId and role
+   * */
+  async rotateRefreshToken(oldRefreshToken) {
+    // verify old refresh token
+    let decodedPayload;
+    try {
+      decodedPayload = jwtService.verifyToken(oldRefreshToken, "refresh");
+    } catch (error) {
+      throw error;
+    }
+    console.log("Decoded Payload:", decodedPayload);
+
+    const { userId, role } = decodedPayload;
+
+    // find the user
+    const user =await userRepository.findByIdWithRefreshToken(userId)
+    console.log("User from DB:", user);
+    if (!user || !user.refreshTokenHash) {
+      throw new ApiError(401, "Invalid session. Please login again.");
+    }
+
+    // compare the hash of old refresh token with stored hash- to detect reuse
+    const isMatch = await bcryptService.compare(
+      oldRefreshToken,
+      user.refreshTokenHash
+    );
+
+    if (!isMatch) {
+      console.warn(
+        `[SECURITY BREACH DETECTED ] for user ID ${userId}. Invalidating all sessions`
+      );
+
+      // invalidate all sessions
+      await userRepository.updateRefreshTokenHash({
+        userId: user._id,
+        refreshTokenHash: null,
+      });
+
+      //force user to login
+      throw new ApiError(401, "Session compromised. Re-login required.");
+    }
+
+    // generate new tokens
+    const token = await this.generateAndSaveTokens(user);
+
+    // return access and refresh tokens
+    return {
+      user: { userId, role },
+      accessToken: token.accessToken,
+      refreshToken: token.refreshToken,
+      accessTokenExpire: token.accessTokenExpire,
+    };
+  }
+
+
+  
+  
+
 }
 
 export const authService = new AuthService()

@@ -39,7 +39,32 @@ const loginUser = async(req,res)=>{
 }
 
 
+/**
+ * @description Handle rerfesh token rqst, rotate the token and issue new Access/Rerfresh Token
+ * refresh token is reterieved from HttpOnly cookie
+ */
+const refreshTokens = async(req,res)=>{
+    // 
+    const oldRefreshToken = req.cookies[config.JWT.REFRESH_COOKIE_NAME]
+    if(!oldRefreshToken) throw new ApiResponse(401,"Refresh token missing",null)
+    
+    const {user,accessToken,refreshToken} = await authService.rotateRefreshToken(oldRefreshToken)
+
+    // set new refresh token in httpOnly cookie
+    res.cookie(
+        config.JWT.REFRESH_COOKIE_NAME,
+        refreshToken,
+        jwtService.getRefreshCookieOptions()
+    )
+
+    return res.status(200).json(new ApiResponse(200,"Tokens refreshed successfully",{
+        user,accessToken
+    }))
+
+}
 
 
 
-export {  registerUser, loginUser };
+
+
+export { refreshTokens, registerUser, loginUser };
