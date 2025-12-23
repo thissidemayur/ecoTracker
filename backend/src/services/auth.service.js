@@ -144,7 +144,14 @@ class AuthService {
   }
 
 
-  
+  /**   *
+   *  @description logout user by clearing refresh token
+   * @params {string} userId - ID of the user to logout
+   * */
+  async logoutUser(userId) {
+    await userRepository.updateRefreshTokenHash(userId,null);
+  }
+
   
 
 }

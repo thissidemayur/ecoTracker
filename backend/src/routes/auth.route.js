@@ -3,7 +3,7 @@ import { authRateLimiter } from "../middlewares/rateLimiter.middleware.js"
 import { validate } from "../middlewares/validation.middleware.js"
 import { userLoginSchema, userRegisterSchema } from "../validators/auth.validator.js"
 import { asyncHandler } from "../utils/asyncHandler.utils.js"
-import { loginUser, refreshTokens, registerUser } from "../controllers/auth.controller.js"
+import { loginUser, logoutUser, refreshTokens, registerUser } from "../controllers/auth.controller.js"
 import { noCache } from "../middlewares/security.middleware.js"
 
 const authRouter = Router()
@@ -25,6 +25,7 @@ authRouter.post(
 
 
 authRouter.post("/refresh",asyncHandler(refreshTokens))
+authRouter.post("/logout",asyncHandler(logoutUser))
 
 
 export {authRouter}

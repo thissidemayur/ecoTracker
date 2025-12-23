@@ -64,7 +64,30 @@ const refreshTokens = async(req,res)=>{
 }
 
 
+/**
+ * @description  logout user session by removing the refresh token hash from DB
+ */
+const logoutUser = async(req,res)=>{
+    const refreshToken = req.cookies[config.JWT.REFRESH_COOKIE_NAME]
+    let userId = null
+
+    try {
+        if(refreshToken) {
+            const decoded = jwtService.verifyToken(refreshToken,"refresh")
+            userId = decoded.userId
+        }
+    } catch (error) {
+        
+    }
+
+    if(userId){
+        await authService.logoutUser(userId)
+    }
+
+    // clear cookies
+    res.clearCookie(config.JWT.REFRESH_COOKIE_NAME,jwtService.getClearCookieOptions())
+    return res.status(200).json(new ApiResponse(200,"User logged out successfully",null))
+}
 
 
-
-export { refreshTokens, registerUser, loginUser };
+export { refreshTokens, logoutUser, registerUser, loginUser };
