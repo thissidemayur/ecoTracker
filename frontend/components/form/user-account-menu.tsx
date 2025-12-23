@@ -66,7 +66,7 @@ export function UserAccountMenu() {
             <Avatar className="w-8 h-8 rounded-lg">
               <AvatarImage src={user.image} alt={user.name} />
               <AvatarFallback className="bg-zinc-950 text-emerald-500 font-bold text-xs">
-                {getInitials(user.name)}
+                {getInitials(user?.name || "NA")}
               </AvatarFallback>
             </Avatar>
             <div className="hidden md:flex flex-col items-start leading-none">
@@ -89,12 +89,12 @@ export function UserAccountMenu() {
           <div className="p-4 mb-2 bg-zinc-900/40 rounded-2xl border border-zinc-800/50 flex items-center gap-3 text-white">
             <Avatar className="w-10 h-10 rounded-xl">
               <AvatarFallback className="text-emerald-500 font-bold text-sm bg-emerald-500/10">
-                {getInitials(user.name)}
+                {getInitials(user?.name || "NA")}
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate">
-                {user.name}
+                {user?.name || "NA"}
               </p>
               <Badge className="bg-emerald-500/10 text-emerald-500 text-[8px] mt-1">
                 {user.role}
