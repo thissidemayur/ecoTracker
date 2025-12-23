@@ -1,9 +1,9 @@
 import {Router} from "express"
 import { authRateLimiter } from "../middlewares/rateLimiter.middleware.js"
 import { validate } from "../middlewares/validation.middleware.js"
-import {  userRegisterSchema } from "../validators/auth.validator.js"
+import { userLoginSchema, userRegisterSchema } from "../validators/auth.validator.js"
 import { asyncHandler } from "../utils/asyncHandler.utils.js"
-import {  registerUser } from "../controllers/auth.controller.js"
+import { loginUser, registerUser } from "../controllers/auth.controller.js"
 import { noCache } from "../middlewares/security.middleware.js"
 
 const authRouter = Router()
@@ -15,6 +15,14 @@ authRouter.post(
     authRateLimiter,
     validate(userRegisterSchema),
     asyncHandler(registerUser))
+
+authRouter.post(
+  "/login",
+  authRateLimiter,
+  validate(userLoginSchema),
+  asyncHandler(loginUser)
+);
+
 
 
 

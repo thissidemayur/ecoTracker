@@ -30,6 +30,34 @@ class AuthService {
     return {user:userDto, ...tokens}
   }
 
+  /**
+   * @description Logs a user in and issues tokens
+   * @params {string} email - email of the user
+   * @params {string} password - password of the user
+   * @returns {Promise<Object>} - returns user info along with access and refresh tokens
+   */
+  async loginUser(email, password) {
+    const user = await userRepository.findByEmail(email, true);
+    if (!user) {
+      throw new ApiError(401, "Invalid email or password");
+    }
+
+    const isPasswordValid = await bcryptService.compare(password,user.password)
+    if(!isPasswordValid){
+        throw new ApiError(401,"Invalid email or password")
+    }
+
+    // generate tokens
+    const tokens = await this.generateAndSaveTokens(user)
+
+    // return a clean user object without password and refreshTokenHash
+    const userDto = user.toObject();
+    delete userDto.password;
+    delete userDto.refreshTokenHash;
+
+    return {user:userDto, ...tokens}
+  }
+
 
 }
 

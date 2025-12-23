@@ -23,7 +23,23 @@ const registerUser = async(req,res)=>{
 }
 
 
+const loginUser = async(req,res)=>{
+    const {user,accessToken,refreshToken} = await authService.loginUser(req.body.email,req.body.password)
+
+    // set refresh token in httpOnly cookie
+    res.cookie(
+        config.JWT.REFRESH_COOKIE_NAME,
+        refreshToken,
+        jwtService.getRefreshCookieOptions()
+    )
+
+    return res.status(200).json(new ApiResponse(200,"User logged in successfully",{
+        user,accessToken
+    }))
+}
 
 
 
-export {  registerUser };
+
+
+export {  registerUser, loginUser };
