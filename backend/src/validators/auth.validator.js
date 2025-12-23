@@ -30,8 +30,13 @@ const userRegisterSchema = z.object({
   role: z.enum([USER_ROLES.ADMIN, USER_ROLES.USER]).optional()
 });
 
+// Login Schema
+const userLoginSchema = z.object({
+    email:z.string().email().trim().toLowerCase(),
+    password:z.string().min(1,"Password is required")
+})
 
 
 
 // export 
-export { userRegisterSchema };
+export { userRegisterSchema, userLoginSchema };
