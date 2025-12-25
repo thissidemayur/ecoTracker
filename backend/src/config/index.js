@@ -11,8 +11,7 @@ const requiredConfig = [
   "CLIENT_URL", //reuired for CORS and secure cookie setup
   "NODE_ENV",
   "REDIS_URL",
-  "HOST"
-];
+]
 
 requiredConfig.forEach(key =>{
     if (!process.env[key]) {
