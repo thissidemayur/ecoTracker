@@ -4,7 +4,6 @@ import { Router } from "express";
 import { authRouter } from "./auth.route.js";
 import { userRouter } from "./user.route.js";
 import { footprintRouter } from "./footprint.routes.js";
-import {factorRouter} from "./emmisionFactor.route.js"
 import {adminRouter} from "./admin.route.js"
 import { healthCheckRouter } from "./healthCheck.js";
 const router = Router();
@@ -25,9 +24,7 @@ router.use("/footprints", footprintRouter);
 // Base URL: /api/v1/admin
 router.use("/admin", adminRouter);
 
-// --- Emission Factor Management Routes ---
-// Base URL: /api/v1/factors
-router.use("/factors", factorRouter);
+
 
 
 // --- Health Check Route ---
