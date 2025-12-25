@@ -112,6 +112,5 @@
         "EC2"
     ],
     "cpu": "256",
-    "memory": "768",
-    "enableFaultInjection": false
+    "memory": "768"
 }
