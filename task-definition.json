@@ -1,0 +1,117 @@
+{
+    "containerDefinitions": [
+        {
+            "name": "ecotrack-api-container",
+            "image": "210954306264.dkr.ecr.ap-south-1.amazonaws.com/ecotrack-backend:91f466807c78911a7ed899042f63b34729ad1c99",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "containerPort": 3000,
+                    "hostPort": 0,
+                    "protocol": "tcp",
+                    "name": "ecotrack-api-80-tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "BCRYPT_SALT_ROUNDS",
+                    "value": "12"
+                },
+                {
+                    "name": "RATE_LIMIT_MAX",
+                    "value": "100"
+                },
+                {
+                    "name": "ACCESS_SECRET",
+                    "value": "SUPER_STRONG_ACCESS_KEY_0123456789ABCDEF"
+                },
+                {
+                    "name": "PORT",
+                    "value": "3000"
+                },
+                {
+                    "name": "MONGO_URI",
+                    "value": "_MONGO_URI_"
+                },
+                {
+                    "name": "CLIENT_URL",
+                    "value": "ecotrack.thissdemayur.me"
+                },
+                {
+                    "name": "NODE_ENV",
+                    "value": "production"
+                },
+                {
+                    "name": "REFRESH_SECRET",
+                    "value": "EVEN_STRONGER_REFRESH_KEY_FEDCBA9876543210"
+                },
+                {
+                    "name": "RATE_LIMIT_WINDOW_MS",
+                    "value": "900000"
+                },
+                {
+                    "name": "REDIS_URL",
+                    "value": "_REDIS_URL_"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/ecotrack-backend-task",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "ap-south-1",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "ecotrack-backend-task",
+    "executionRoleArn": "arn:aws:iam::210954306264:role/ecsTaskExecutionRole",
+    "networkMode": "bridge",
+    "volumes": [],
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.ecr-auth"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "ecs.capability.execution-role-ecr-pull"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.29"
+        }
+    ],
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2"
+    ],
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "requiresCompatibilities": [
+        "EC2"
+    ],
+    "cpu": "256",
+    "memory": "768",
+    "enableFaultInjection": false
+}
