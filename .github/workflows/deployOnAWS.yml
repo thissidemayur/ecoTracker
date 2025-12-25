@@ -62,6 +62,6 @@ jobs:
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1 # Use v1 (the official AWS version)
         with:
           task-definition: ${{ steps.task-def.outputs.task-definition }}
-          service: ecotrack-backend-task-service-kz8qux2v # Ensure this matches AWS exactly
+          service: ecotrack-ecs-service # Ensure this matches AWS exactly
           cluster: ecotrack-cluster # Ensure this matches AWS exactly
           wait-for-service-stability: true
