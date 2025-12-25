@@ -26,7 +26,7 @@ export const config = {
     NODE_ENV: process.env.NODE_ENV,
     PORT:process.env.PORT,
     CLIENT_URL:process.env.CLIENT_URL,
-    HOST:process.env.HOST,
+    HOST:process.env.HOST || "0.0.0.0",
     // DB
     MONGO_URI:process.env.MONGO_URI,
 
