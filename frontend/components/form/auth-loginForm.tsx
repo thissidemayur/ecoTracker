@@ -9,148 +9,258 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useAuthApi } from "@/hooks/useAuthApi";
 import { Controller, useForm } from "react-hook-form";
 import z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
-import { Mail, Lock, LogIn, Loader2, Heart } from "lucide-react";
+import {
+  Mail,
+  Lock,
+  LogIn,
+  Loader2,
+  Heart,
+  ShieldCheck,
+  ArrowLeft,
+  RefreshCw,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
 
-const formSchema = z.object({
-  email: z
-    .string()
-    .min(1, "Please enter your email")
-    .email("That doesn't look like a valid email"),
+const loginSchema = z.object({
+  email: z.string().min(1, "Please enter your email").email("Invalid email"),
   password: z.string().min(1, "Please enter your password"),
+});
+
+const otpSchema = z.object({
+  otp: z.string().length(6, "OTP must be 6 digits"),
 });
 
 export function LoginForm({
   className,
   ...props
-}: React.ComponentProps<"form">) {
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+}: React.ComponentProps<"div">) {
+  const [showOtp, setShowOtp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [timer, setTimer] = useState(0); // Countdown for resend
+  const { loginUser, verifyOtp } = useAuthApi();
+  const router = useRouter();
+
+  const loginForm = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
     mode: "onChange",
-    defaultValues: { password: "", email: "" },
+    defaultValues: { email: "", password: "" },
   });
 
-  const { isSubmitting } = form.formState;
-  const { loginUser } = useAuthApi();
+  const otpForm = useForm<z.infer<typeof otpSchema>>({
+    resolver: zodResolver(otpSchema),
+    mode: "onChange",
+    defaultValues: { otp: "" },
+  });
 
-  const handleSubmit = async (data: z.infer<typeof formSchema>) => {
-    try {
-      await loginUser(data.email, data.password);
-    } catch (error) {
-      console.error("Login error:", error);
+  // Timer Logic for Resend OTP
+  useEffect(() => {
+    let interval: any;
+    if (timer > 0) {
+      interval = setInterval(() => setTimer((prev) => prev - 1), 1000);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  const onInitialLogin = async (data: z.infer<typeof loginSchema>) => {
+    const result = await loginUser(data.email, data.password);
+    if (result?.data?.requiresOtp) {
+      setEmail(data.email);
+      setShowOtp(true);
+      setTimer(60); // Start 60s cooldown
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (timer > 0) return;
+    // Re-run the login call to trigger a new OTP
+    const password = loginForm.getValues("password");
+    await loginUser(email, password);
+    setTimer(60);
+  };
+
+  const onOtpSubmit = async (data: z.infer<typeof otpSchema>) => {
+    const result = await verifyOtp(email, data.otp);
+    if (result?.success) {
+      router.push("/dashboard");
     }
   };
 
   return (
-    <form
-      onSubmit={form.handleSubmit(handleSubmit)}
-      className={cn("flex flex-col gap-8", className)}
-      {...props}
+    <div
+      className={cn("flex flex-col gap-8 w-full max-w-sm mx-auto", className)}
     >
-      {/* 1. WELCOME SECTION */}
       <div className="flex flex-col items-center gap-2 text-center">
-        <h1 className="text-3xl font-bold text-white tracking-tight">
-          Welcome Back!
+        <h1 className="text-3xl font-black text-white italic uppercase tracking-tighter">
+          {showOtp ? "Verify" : "Login"}
         </h1>
-        <p className="text-zinc-400 text-sm">
-          Good to see you again. Let&apos;s continue saving the planet.
+        <p className="text-zinc-500 text-xs font-medium italic">
+          {showOtp
+            ? `Code sent to ${email}`
+            : "Ready to continue your mission?"}
         </p>
       </div>
 
-      <FieldGroup className="space-y-6">
-        {/* Email Field */}
-        <Controller
-          name="email"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Field>
-              <FieldLabel className="text-sm font-medium text-zinc-300 mb-1.5 flex items-center gap-2">
-                <Mail className="size-4 text-emerald-500" /> Email Address
-              </FieldLabel>
-              <Input
-                {...field}
-                id="email"
-                type="email"
-                placeholder="yourname@email.com"
-                className="h-12 bg-zinc-900 border-zinc-800 rounded-xl text-white placeholder:text-zinc-600 focus:ring-emerald-500"
+      <div className="relative overflow-hidden">
+        {/* Step 1: Password (Visible when !showOtp) */}
+        {!showOtp ? (
+          <form
+            onSubmit={loginForm.handleSubmit(onInitialLogin)}
+            className="space-y-6"
+          >
+            <FieldGroup className="space-y-4">
+              <Controller
+                name="email"
+                control={loginForm.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                      <Mail className="size-3 text-emerald-500" /> Email
+                    </FieldLabel>
+                    <Input
+                      {...field}
+                      type="email"
+                      placeholder="pioneer@eco.com"
+                      className="h-12 bg-zinc-900 border-zinc-800 rounded-xl text-white"
+                    />
+                    {fieldState.error && (
+                      <p className="text-[10px] text-red-500 mt-1 italic">
+                        {fieldState.error.message}
+                      </p>
+                    )}
+                  </Field>
+                )}
               />
-              {fieldState.invalid && (
-                <FieldError
-                  className="text-xs text-red-400 mt-1"
-                  errors={[fieldState.error]}
-                />
-              )}
-            </Field>
-          )}
-        />
-
-        {/* Password Field */}
-        <Controller
-          name="password"
-          control={form.control}
-          render={({ field, fieldState }) => (
-            <Field>
-              <FieldLabel className="text-sm font-medium text-zinc-300 mb-1.5 flex items-center gap-2">
-                <Lock className="size-4 text-emerald-500" /> Password
-              </FieldLabel>
-              <Input
-                {...field}
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                className="h-12 bg-zinc-900 border-zinc-800 rounded-xl text-white placeholder:text-zinc-600 focus:ring-emerald-500"
+              <Controller
+                name="password"
+                control={loginForm.control}
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                      <Lock className="size-3 text-emerald-500" /> Password
+                    </FieldLabel>
+                    <Input
+                      {...field}
+                      type="password"
+                      placeholder="••••••••"
+                      className="h-12 bg-zinc-900 border-zinc-800 rounded-xl text-white"
+                    />
+                    {fieldState.error && (
+                      <p className="text-[10px] text-red-500 mt-1 italic">
+                        {fieldState.error.message}
+                      </p>
+                    )}
+                  </Field>
+                )}
               />
-              {fieldState.invalid && (
-                <FieldError
-                  className="text-xs text-red-400 mt-1"
-                  errors={[fieldState.error]}
-                />
+            </FieldGroup>
+            <Button
+              disabled={loginForm.formState.isSubmitting}
+              className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black uppercase tracking-widest rounded-xl transition-all shadow-lg shadow-emerald-500/10"
+            >
+              {loginForm.formState.isSubmitting ? (
+                <Loader2 className="animate-spin" />
+              ) : (
+                "Access Account"
               )}
-            </Field>
-          )}
-        />
+            </Button>
+          </form>
+        ) : (
+          /* Step 2: OTP (Visible when showOtp) */
+          <form
+            onSubmit={otpForm.handleSubmit(onOtpSubmit)}
+            className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
+          >
+            <Controller
+              name="otp"
+              control={otpForm.control}
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel className="text-[10px] font-black text-zinc-500 uppercase tracking-widest flex items-center gap-2">
+                    <ShieldCheck className="size-3 text-emerald-500" /> Security
+                    Code
+                  </FieldLabel>
+                  <Input
+                    {...field}
+                    maxLength={6}
+                    className="h-14 bg-zinc-900 border-zinc-800 rounded-xl text-center text-2xl font-black tracking-[0.5em] text-emerald-500"
+                  />
+                  {fieldState.error && (
+                    <p className="text-[10px] text-red-500 mt-1 italic">
+                      {fieldState.error.message}
+                    </p>
+                  )}
+                </Field>
+              )}
+            />
 
-        {/* Action Button */}
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-all shadow-md active:scale-95"
-        >
-          {isSubmitting ? (
-            <Loader2 className="animate-spin size-5" />
-          ) : (
-            <span className="flex items-center gap-2">
-              Sign In <LogIn className="size-4" />
-            </span>
-          )}
-        </Button>
+            <div className="flex flex-col gap-4">
+              <Button
+                disabled={otpForm.formState.isSubmitting}
+                className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-black uppercase tracking-widest rounded-xl"
+              >
+                {otpForm.formState.isSubmitting ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  "Verify & Launch"
+                )}
+              </Button>
 
-        {/* Bottom Link */}
+              <div className="flex items-center justify-between px-1">
+                <button
+                  type="button"
+                  onClick={() => setShowOtp(false)}
+                  className="text-[10px] text-zinc-500 uppercase font-black flex items-center gap-2 hover:text-white transition-colors"
+                >
+                  <ArrowLeft className="size-3" /> Change Email
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={timer > 0}
+                  className={cn(
+                    "text-[10px] uppercase font-black flex items-center gap-2 transition-colors",
+                    timer > 0
+                      ? "text-zinc-700 cursor-not-allowed"
+                      : "text-emerald-500 hover:text-white"
+                  )}
+                >
+                  <RefreshCw
+                    className={cn("size-3", timer > 0 && "animate-spin-slow")}
+                  />
+                  {timer > 0 ? `Resend in ${timer}s` : "Resend Code"}
+                </button>
+              </div>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {!showOtp && (
         <div className="text-center">
-          <p className="text-sm text-zinc-500">
-            Don&apos;t have an account yet?{" "}
+          <p className="text-sm text-zinc-600 font-medium">
+            New to the mission?{" "}
             <Link
               href="/register"
-              className="text-emerald-500 font-semibold hover:text-emerald-400 underline-offset-4 decoration-2"
+              className="text-emerald-500 font-black hover:underline uppercase tracking-tighter"
             >
-              Create one here
+              Join Now
             </Link>
           </p>
         </div>
-      </FieldGroup>
+      )}
 
-      {/* Safety Message */}
-      <div className="flex items-center justify-center gap-2 text-zinc-600 pt-4 border-t border-zinc-900">
+      <div className="flex items-center justify-center gap-2 text-zinc-800 pt-4 border-t border-zinc-900">
         <Heart className="size-3" />
-        <span className="text-[11px]">
-          Your data is safe and private with us.
+        <span className="text-[9px] font-black uppercase tracking-[0.2em]">
+          Secure Node 01
         </span>
       </div>
-    </form>
+    </div>
   );
 }
