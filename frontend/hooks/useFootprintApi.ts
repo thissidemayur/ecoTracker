@@ -16,7 +16,7 @@ import { toast } from "sonner";
 
 export const useFootprintApi = () => {
   // Destructure global state actions from Zustand
-  const { setDashboardData, setLoading, setLastResult, isLoading, } =
+  const { setDashboardData, setLoading, setLastResult, isLoading, resetStore } =
     useFootprintStore();
 
   // 1. Create Footprint (POST)
@@ -73,8 +73,9 @@ export const useFootprintApi = () => {
         
       }
     } catch (error) {
-      handleApiError(error);
-      toast.error("Failed to sync dashboard telemetry.");
+      resetStore()
+      const {message} = handleApiError(error);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
