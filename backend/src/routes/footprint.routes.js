@@ -44,7 +44,7 @@ footprintRouter.get(
 // GET: /api/v1/footprints/analytics
 // ----------------------------------------------------
 // Retrieves aggregated analytics data for the user dashboard,
-footprintRouter.get("/analytics", isAuth, hasRole([USER_ROLES.USER]), asyncHandler(getAnalytics) )
+footprintRouter.get("/analytics", isAuth, hasRole([USER_ROLES.USER,USER_ROLES.ADMIN]), asyncHandler(getAnalytics) )
 
 
 // GET: /api/v1/footprints/:logId
