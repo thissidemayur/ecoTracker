@@ -8,7 +8,6 @@ import {
   ChevronDown,
   UserCircle,
   KeyRound,
-  ShieldCheck,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +36,7 @@ import { ChangePasswordForm } from "./user-changePassword";
 import { ViewProfileContent } from "@/components/dashboard/user-profile";
 
 export function UserAccountMenu() {
-  const { user } = useAuthStore();
+  const user = useAuthStore((state) => state.user);
   const { logout } = useAuthApi();
 
   // Three separate states for three separate windows
@@ -151,6 +150,11 @@ export function UserAccountMenu() {
 
       {/* 1. VIEW PROFILE DIALOG */}
       <Dialog open={showViewProfile} onOpenChange={setShowViewProfile}>
+        <DialogHeader className="p-6 border-b border-zinc-900">
+          <DialogTitle className="text-xl font-bold text-red-500 uppercase italic">
+           
+          </DialogTitle>
+        </DialogHeader>
         <DialogContent className="sm:max-w-md bg-zinc-950 border-zinc-900 rounded-[2rem] p-8">
           <ViewProfileContent user={user} />
         </DialogContent>
