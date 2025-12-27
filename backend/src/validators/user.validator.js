@@ -4,35 +4,54 @@ import { z } from "zod";
 // Schema for updating user profile details (e.g., username, region)
 export const updateProfileSchema = z
   .object({
-    // Allows updating the username, but still applies cleaning/validation rules
     username: z
       .string()
       .min(3, "Username must be at least 3 characters long")
       .max(30)
       .regex(
         /^[a-zA-Z0-9_]+$/,
-        "Username can only contain letters, numbers, and underscores"
+        "Only letters, numbers, and underscores allowed"
       )
       .trim()
       .toLowerCase()
       .optional(),
 
-    // The region field (e.g., US-CA, IN-DL)
-    region: z.string().max(50, "Region name is too long").optional(),
 
-    // Home size is required for comparison features
+    name: z.string().max(100, "Name cannot exceed 100 characters").optional(),
+
+    // 1. NESTED LOCATION FIELD
+    // Matches your Mongoose schema structure
+    location: z
+      .object({
+        country: z.string().max(50).optional(),
+        state: z.string().max(50).optional(),
+        district: z.string().max(50).optional(),
+        pincode: z
+          .string()
+          .regex(/^[0-9]{6}$/, "Pincode must be exactly 6 digits") // Specific to India (optional)
+          .optional(),
+      })
+      .optional(),
+
+    // 2. HOUSEHOLD MEMBERS
+    household_members: z
+      .number()
+      .int()
+      .min(1, "Must have at least 1 member")
+      .max(20, "Please contact support for large groups over 20") // Safer UI limit than DB 100
+      .optional(),
+
     home_size_sqm: z
       .number()
       .int()
       .min(1, "Home size must be positive")
       .optional(),
 
-    // Any other profile fields (e.g., number of household members)
-    // household_members: z.number().int().min(1).max(10).optional()
+    // Legacy field (if you still want to allow string regions)
+    region: z.string().max(50).optional(),
   })
   .strict()
-  .partial(); // Use .partial() to allow the user to send only a subset of fields
-
+  .partial();
 // Schema for changing the user's password
 export const changePasswordSchema = z
   .object({
