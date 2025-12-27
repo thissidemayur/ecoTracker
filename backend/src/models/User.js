@@ -57,6 +57,14 @@ const userSchema = new mongoose.Schema(
       district: { type: String, default: "" },
       pincode: { type: String, default: "" },
     },
+    // total number of household members
+    household_members: {
+      type: Number,
+      min: [1, "There must be at least 1 household member"],
+      max: [100, "Household members cannot exceed 100"],
+      default: 1,
+    },
+    // size of home in square meters
 
     home_size_sqm: {
       type: Number,
