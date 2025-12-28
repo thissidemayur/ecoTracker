@@ -18,25 +18,35 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/state/authStore";
+import { IUser } from "@/types/authApi.type";
 
 const onboardingSchema = z.object({
-  name: z.string().min(2, "Please tell us your name!"),
-  username: z.string().min(3, "Pick a cool username (3+ letters)"),
+  name: z.string().min(2, "Name too short"),
+  username: z
+    .string()
+    .min(3, "Username too short")
+    .regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers, and underscores allowed"),
   location: z.object({
-    country: z.string().min(1, "Pick your country"),
-    state: z.string().min(1, "Pick your state"),
-    district: z.string().min(1, "Pick your district"),
-    pincode: z.string().length(6, "Pin code should be 6 digits"),
+    country: z.string().min(1, "Required"),
+    state: z.string().min(1, "Required"),
+    district: z.string().min(1, "Required"),
+    pincode: z.string().length(6, "Must be 6 digits"),
   }),
-  home_size_sqm: z.number().min(1),
-  householdSize: z.number().min(1),
+  // Coerce handles strings coming from HTML inputs and turns them into numbers
+  home_size_sqm: z.coerce.number().min(1, "Min 1"),
+  household_members: z.coerce.number().min(1, "Min 1"),
+  hasOnboarded: z.boolean().optional(),
 });
 
 type OnboardingData = z.infer<typeof onboardingSchema>;
 
-export  function OnBoarding() {
+export function OnBoarding() {
+  const { user, setUser } = useAuthStore();
   const [step, setStep] = useState(1);
   const { updateProfile, isUserLoading } = useUserApi();
+  const router = useRouter();
 
   const {
     register,
@@ -45,12 +55,15 @@ export  function OnBoarding() {
     trigger,
     formState: { errors },
   } = useForm<OnboardingData>({
-    resolver: zodResolver(onboardingSchema),
+    resolver: zodResolver(onboardingSchema) as any,
     defaultValues: {
       location: { country: "IN", state: "", district: "", pincode: "" },
-      householdSize: 1,
+      household_members: 1,
       home_size_sqm: 50,
-    } as any,
+      name: user?.name || "",
+      username: user?.username || "",
+      hasOnboarded:false
+    },
   });
 
   const watchedCountry = watch("location.country") || "IN";
@@ -62,7 +75,7 @@ export  function OnBoarding() {
     [watchedCountry]
   );
   const cities = useMemo(
-    () => City.getCitiesOfState(watchedCountry, watchedState),
+    () => City.getCitiesOfState(watchedCountry, watchedState || ""),
     [watchedCountry, watchedState]
   );
 
@@ -82,18 +95,35 @@ export  function OnBoarding() {
   };
 
   const onSubmit = async (data: OnboardingData) => {
-    await updateProfile({ ...data, onboardingComplete: true });
-    window.location.href = "/dashboard";
+    console.log("Onboarding Data Submitted:", data);
+    try {
+      // 1. Send data to backend with the completion flag
+      const response = await updateProfile({
+        ...data,
+        hasOnboarded: true, // Matches your DB schema field
+      });
+      console.log("Onboarding Response:", response);
+
+      if (response?.success) {
+        // 2. Redirect to dashboard
+        if (setUser) {
+          setUser({ ...user, ...data, hasOnboarded: true } as IUser);
+        }
+        router.push("/dashboard");
+      }
+     
+    } catch (err) {
+    }
   };
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white flex flex-col items-center justify-center p-4 relative overflow-hidden font-sans">
-      {/* Dynamic Background Glows */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-emerald-500/10 blur-[120px] rounded-full animate-pulse" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 blur-[120px] rounded-full animate-pulse delay-700" />
+      {/* Background Glows */}
+      <div className="absolute top-[-10%] left-[-10%] size-[40%] bg-emerald-500/10 blur-[120px] rounded-full animate-pulse" />
+      <div className="absolute bottom-[-10%] right-[-10%] size-[40%] bg-blue-500/10 blur-[120px] rounded-full animate-pulse delay-700" />
 
       <div className="w-full max-w-xl relative z-10">
-        {/* 1. PROGRESS BAR */}
+        {/* PROGRESS INDICATOR */}
         <div className="flex justify-between mb-12 relative px-2">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-zinc-900 -translate-y-1/2 z-0" />
           {[1, 2, 3].map((s) => (
@@ -111,50 +141,49 @@ export  function OnBoarding() {
           ))}
         </div>
 
-        {/* 2. STEP CONTENT */}
         <form
           onSubmit={handleSubmit(onSubmit)}
           className="space-y-8 min-h-[400px]"
         >
           {/* STEP 1: IDENTITY */}
           {step === 1 && (
-            <div className="space-y-6 transition-opacity duration-300">
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
               <div className="space-y-2">
-                <h2 className="text-4xl font-black italic uppercase tracking-tighter flex items-center gap-3 leading-tight">
-                  Welcome Friend!{" "}
+                <h2 className="text-4xl font-black italic uppercase tracking-tighter flex items-center gap-3">
+                  Welcome!{" "}
                   <Sparkles className="text-emerald-500 animate-bounce" />
                 </h2>
                 <p className="text-zinc-500 font-medium italic">
-                  Let's start with the basics. What should we call you?
+                  What should we call you in our community?
                 </p>
               </div>
               <div className="space-y-5">
                 <div className="space-y-2">
                   <Label className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">
-                    Your Display Name
+                    Display Name
                   </Label>
                   <Input
                     {...register("name")}
-                    placeholder="John Doe"
-                    className="h-14 bg-zinc-900/50 border-zinc-800 rounded-2xl text-lg focus:border-emerald-500/50 transition-all"
+                    placeholder="Your Name"
+                    className="h-14 bg-zinc-900/50 border-zinc-800 rounded-2xl text-lg focus:border-emerald-500/50"
                   />
                   {errors.name && (
-                    <p className="text-[10px] text-red-500 italic">
+                    <p className="text-xs text-red-500 italic">
                       {errors.name.message}
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] uppercase tracking-widest text-zinc-400 font-bold">
-                    Pick a Cool Username
+                    Username
                   </Label>
                   <Input
                     {...register("username")}
-                    placeholder="eco_warrior"
+                    placeholder="eco_pioneer"
                     className="h-14 bg-zinc-900/50 border-zinc-800 rounded-2xl text-lg"
                   />
                   {errors.username && (
-                    <p className="text-[10px] text-red-500 italic">
+                    <p className="text-xs text-red-500 italic">
                       {errors.username.message}
                     </p>
                   )}
@@ -165,13 +194,13 @@ export  function OnBoarding() {
 
           {/* STEP 2: LOCATION */}
           {step === 2 && (
-            <div className="space-y-6 transition-opacity duration-300">
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
               <div className="space-y-2">
-                <h2 className="text-4xl font-black italic uppercase tracking-tighter leading-tight">
+                <h2 className="text-4xl font-black italic uppercase tracking-tighter">
                   Your Home Base
                 </h2>
                 <p className="text-zinc-500 font-medium italic">
-                  Where in the world are you making an impact?
+                  Where are you making an impact?
                 </p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -181,7 +210,7 @@ export  function OnBoarding() {
                   </Label>
                   <select
                     {...register("location.country")}
-                    className="w-full h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 text-white outline-none focus:border-emerald-500/50"
+                    className="w-full h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 text-white"
                   >
                     {countries.map((c) => (
                       <option
@@ -200,7 +229,7 @@ export  function OnBoarding() {
                   </Label>
                   <select
                     {...register("location.state")}
-                    className="w-full h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 text-white outline-none focus:border-emerald-500/50"
+                    className="w-full h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 text-white"
                   >
                     <option value="" className="bg-zinc-950">
                       Select State
@@ -215,6 +244,11 @@ export  function OnBoarding() {
                       </option>
                     ))}
                   </select>
+                  {errors.location?.state && (
+                    <p className="text-xs text-red-500 italic">
+                      {errors.location.state.message}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] uppercase text-zinc-500 font-bold">
@@ -222,7 +256,7 @@ export  function OnBoarding() {
                   </Label>
                   <select
                     {...register("location.district")}
-                    className="w-full h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 text-white outline-none focus:border-emerald-500/50"
+                    className="w-full h-12 bg-zinc-900/50 border border-zinc-800 rounded-xl px-4 text-white"
                   >
                     <option value="" className="bg-zinc-950">
                       Select District
@@ -240,7 +274,7 @@ export  function OnBoarding() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[10px] uppercase text-zinc-500 font-bold">
-                    Local Pin Code
+                    Pin Code
                   </Label>
                   <Input
                     {...register("location.pincode")}
@@ -254,18 +288,18 @@ export  function OnBoarding() {
 
           {/* STEP 3: LIFESTYLE */}
           {step === 3 && (
-            <div className="space-y-6 transition-opacity duration-300">
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
               <div className="space-y-2">
-                <h2 className="text-4xl font-black italic uppercase tracking-tighter text-blue-400 leading-tight">
+                <h2 className="text-4xl font-black italic uppercase tracking-tighter text-blue-400">
                   Final Touch!
                 </h2>
                 <p className="text-zinc-500 font-medium italic">
-                  Help us calculate your family's footprint.
+                  Help us calculate your family&apos;s footprint.
                 </p>
               </div>
               <div className="space-y-4">
-                <div className="bg-zinc-900/30 p-6 rounded-[2rem] border border-zinc-900 flex items-center gap-6 hover:border-blue-500/30 transition-colors">
-                  <div className="p-4 bg-blue-500/10 rounded-2xl text-blue-500">
+                <div className="bg-zinc-900/30 p-6 rounded-[2rem] border border-zinc-900 flex items-center gap-6 hover:border-blue-500/30 transition-colors group">
+                  <div className="p-4 bg-blue-500/10 rounded-2xl text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-all">
                     <Users className="size-6" />
                   </div>
                   <div className="flex-1">
@@ -274,13 +308,13 @@ export  function OnBoarding() {
                     </Label>
                     <Input
                       type="number"
-                      {...register("householdSize", { valueAsNumber: true })}
+                      {...register("household_members")}
                       className="bg-transparent border-0 border-b border-zinc-800 rounded-none p-0 text-3xl font-black focus-visible:ring-0 text-white"
                     />
                   </div>
                 </div>
-                <div className="bg-zinc-900/30 p-6 rounded-[2rem] border border-zinc-900 flex items-center gap-6 hover:border-emerald-500/30 transition-colors">
-                  <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-500">
+                <div className="bg-zinc-900/30 p-6 rounded-[2rem] border border-zinc-900 flex items-center gap-6 hover:border-emerald-500/30 transition-colors group">
+                  <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-500 group-hover:bg-emerald-500 group-hover:text-white transition-all">
                     <Home className="size-6" />
                   </div>
                   <div className="flex-1">
@@ -289,7 +323,7 @@ export  function OnBoarding() {
                     </Label>
                     <Input
                       type="number"
-                      {...register("home_size_sqm", { valueAsNumber: true })}
+                      {...register("home_size_sqm")}
                       className="bg-transparent border-0 border-b border-zinc-800 rounded-none p-0 text-3xl font-black focus-visible:ring-0 text-white"
                     />
                   </div>
@@ -298,7 +332,7 @@ export  function OnBoarding() {
             </div>
           )}
 
-          {/* 3. FOOTER BUTTONS */}
+          {/* FOOTER BUTTONS */}
           <div className="pt-8 flex gap-4">
             {step > 1 && (
               <Button
@@ -310,12 +344,11 @@ export  function OnBoarding() {
                 Back
               </Button>
             )}
-
             {step < 3 ? (
               <Button
                 type="button"
                 onClick={nextStep}
-                className="h-14 flex-1 bg-white text-zinc-950 hover:bg-emerald-500 hover:text-white font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl shadow-white/5 active:scale-95"
+                className="h-14 flex-1 bg-white text-zinc-950 hover:bg-emerald-500 hover:text-white font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl active:scale-95"
               >
                 Next Step <ArrowRight className="ml-2 size-4" />
               </Button>
