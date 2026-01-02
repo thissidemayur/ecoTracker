@@ -10,7 +10,7 @@ export interface IUser {
   name?: string;
   username?: string;
   email: string;
-  role: "USER" | "ADMIN";
+  role: "user" | "admin";
   isVerified: boolean;
 
   // New Onboarding & Location Fields

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { DashboardWrapper } from "@/components/providers/DashboardProvider";
 import { GlobalSummaryGrid } from "@/components/dashboard/global-summary-grid";
 import { AdminLeaderboard } from "@/components/dashboard/admin-leaderboard";
@@ -9,82 +9,29 @@ import { Activity, RefreshCcw, ShieldAlert, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useFootprintStore } from "@/state/useFootprintStore";
-import { useFootprintApi } from "@/hooks/useFootprintApi";
+import { useAdminApi } from "@/hooks/useAdminApi";
+import { useAdminStore } from "@/state/adminStore";
 
 export default function AdminDashboard() {
-  const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { summary, isLoading } = useAdminStore();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const { fetchAdminSummary } = useAdminApi();
 
-  // // 1. Core Fetching Logic
-  // const fetchAdminData = useCallback(async () => {
-  //   try {
-  //     // In a real app, use your axios instance:
-  //     // const { data } = await api.get('/api/v1/admin/summary');
+  useEffect(() => {
+    fetchAdminSummary();
+  }, [fetchAdminSummary]);
 
-  //     // Mocking the backend response from your /summary and /footprints logic
-  //     const mockSummary = {
-  //       totalUsers: 1240,
-  //       globalAvgFootprint: 450.25,
-  //       totalLogsCount: 8900,
-  //       pendingValidations: 14,
-  //       lowPerformers: [
-  //         { userId: "u1", name: "Alice Green", total_co2e: 120, rank: 1 },
-  //         { userId: "u2", name: "Bob Eco", total_co2e: 145, rank: 2 },
-  //       ],
-  //       highPerformers: [
-  //         {
-  //           userId: "u8",
-  //           name: "Heavy Industry Corp",
-  //           total_co2e: 12400,
-  //           rank: 1,
-  //         },
-  //         { userId: "u9", name: "Logistics Hub B", total_co2e: 9800, rank: 2 },
-  //       ],
-  //       pendingUsers: [
-  //         {
-  //           _id: "645a...",
-  //           name: "New Node 01",
-  //           email: "node1@test.com",
-  //           isVerified: false,
-  //           signupDate: "2025-12-15",
-  //         },
-  //         {
-  //           _id: "645b...",
-  //           name: "New Node 02",
-  //           email: "node2@test.com",
-  //           isVerified: false,
-  //           signupDate: "2025-12-20",
-  //         },
-  //       ],
-  //     };
-
-  //     setData(mockSummary);
-  //   } catch (error) {
-  //     toast.error("System sync failed. Check API endpoint clearance.");
-  //   } finally {
-  //     setIsLoading(false);
-  //     setIsRefreshing(false);
-  //   }
-  // }, []);
-
-  // useEffect(() => {
-  //   fetchAdminData();
-  // }, [fetchAdminData]);
-
-  // const {refreshDashboard,} = useFootprintApi()
-
-  // 2. Refresh Handler
-  const handleRefresh = () => {
+  // 2. Refresh Handler: This runs when you click "Sync Database"
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    // refreshDashboard();
-    toast.info("Database synchronized", {
+    await fetchAdminSummary(); // Get the latest data
+    setIsRefreshing(false);
+    toast.success("Database synchronized", {
       description: "Admin registry updated with latest node telemetry.",
     });
   };
 
-  if (isLoading) {
+  if (isLoading || !summary) {
     return (
       <DashboardWrapper className="flex flex-col items-center justify-center min-h-[60vh]">
         <Activity className="size-8 text-red-500 animate-spin mb-4" />
@@ -130,7 +77,7 @@ export default function AdminDashboard() {
         </header>
 
         {/* 1. GLOBAL SUMMARY (KPI Grid) */}
-        <GlobalSummaryGrid summaryData={data} />
+        <GlobalSummaryGrid summaryData={summary} />
 
         {/* 2. LEADERBOARD (High vs Low Nodes) */}
         <div className="space-y-6">
@@ -141,8 +88,8 @@ export default function AdminDashboard() {
             </h2>
           </div>
           <AdminLeaderboard
-            highPerformers={data.highPerformers}
-            lowPerformers={data.lowPerformers}
+            highPerformers={summary.topPerformers}
+            lowPerformers={summary.bottomPerformers}
           />
         </div>
 
@@ -154,7 +101,7 @@ export default function AdminDashboard() {
               Node_Validation_Registry
             </h2>
           </div>
-          <UserValidationTable users={data.pendingUsers} />
+          {/* <UserValidationTable users={summary.pendingUsers} /> */}
         </div>
       </div>
     </DashboardWrapper>

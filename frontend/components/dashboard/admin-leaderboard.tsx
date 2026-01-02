@@ -43,7 +43,7 @@ export function AdminLeaderboard({
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-zinc-900">
-            {lowPerformers.map((node, index) => (
+            {lowPerformers?.map((node, index) => (
               <LeaderboardRow
                 key={node.userId}
                 node={node}
@@ -75,7 +75,7 @@ export function AdminLeaderboard({
         </CardHeader>
         <CardContent className="p-0">
           <div className="divide-y divide-zinc-900">
-            {highPerformers.map((node, index) => (
+            {highPerformers?.map((node, index) => (
               <LeaderboardRow
                 key={node.userId}
                 node={node}

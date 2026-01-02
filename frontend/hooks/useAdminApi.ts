@@ -1,36 +1,84 @@
 import { api } from "@/api/axios";
-import { useAdminStore } from "@/state/adminStore"
-import { IAdminSummary } from "@/types/admin.type";
+import { useAdminStore } from "@/state/adminStore";
+import { IAdminSummary } from "@/types/admin.type"; // Ensure this is exported from your types
 import { IApiResponse } from "@/types/api.type";
-import { handleApiError } from "@/utils/api.utils";
+import {
+  handleApiError,
+  handleApiSuccess,
+  HookResponse,
+} from "@/utils/api.utils";
+import { useCallback } from "react";
 import { toast } from "sonner";
 
-export const useAdminApi = () =>{
+/**
+ * @description Custom hook for Admin-level telemetry and governance data.
+ * Adheres to the Service-Repository pattern by abstracting API logic.
+ */
+export const useAdminApi = () => {
+  // Destructure store actions from your adminState
+  const { setSummary, setIsLoading, isLoading } = useAdminStore();
 
-    const { setSummary, setIsLoading ,summary} = useAdminStore();
+  /**
+   * @description Fetches global platform summary for the Global Audit view.
+   * @returns {Promise<HookResponse<IAdminSummary>>}
+   */
+  const fetchAdminSummary = useCallback(async (): Promise<
+    HookResponse<IAdminSummary>
+  > => {
+    setIsLoading(true);
+    try {
+      // 1. Execute GET request to the validated admin route
+      const response = await api.get<IApiResponse<IAdminSummary>>(
+        "/admin/summary"
+      );
 
-    const fetchAdminSummary = async() =>{
-        setIsLoading(true);
-        
-        try {
-          const response =    await api.get<IApiResponse<IAdminSummary>>("/admin/summary")
-          const result = response.data;
-          
-          if(result.success ) {
-            setSummary(result.data);
-        
+      const result = handleApiSuccess<IAdminSummary>(response);
+
+      if (result.success && result.data) {
+        // 2. Synchronize the global admin state
+        setSummary(result.data);
+      }
+
+      return result;
+    } catch (error) {
+      // 3. Centralized error handling for programmatic or server errors
+      const errorData = handleApiError(error);
+      toast.error(errorData.message);
+      return errorData;
+    } finally {
+      setIsLoading(false);
+    }
+  }, [setIsLoading, setSummary]);
+
+  /**
+   * @description Fetches detailed aggregated footprint logs with filters.
+   * Useful for the Node_Validation_Registry table.
+   */
+  const fetchAggregatedLogs = useCallback(
+    async (filters: object = {}) => {
+      setIsLoading(true);
+      try {
+        const response = await api.get<IApiResponse<any[]>>(
+          "/admin/footprints",
+          {
+            params: filters, // Matches backend queryOptions
           }
-          return result;
-        } catch (error) {
-            const {message} = handleApiError(error);
-            toast.error(message);
-            return error
-        }
-    };
+        );
+        return handleApiSuccess(response);
+      } catch (error) {
+        const errorData = handleApiError(error);
+        toast.error(errorData.message);
+        return errorData;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [setIsLoading]
+  );
 
-    // Return the functions and state you want to expose
-
-
-    
-
-}
+  return {
+    fetchAdminSummary,
+    fetchAggregatedLogs,
+    isLoading,
+  };
+};

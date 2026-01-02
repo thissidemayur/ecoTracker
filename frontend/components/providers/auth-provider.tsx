@@ -1,74 +1,59 @@
 "use client";
-
-import { useAuthApi } from "@/hooks/useAuthApi";
-import { useUserApi } from "@/hooks/useUserApi";
+import { ShieldAlert } from "lucide-react";
+import { Button } from "../ui/button";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuthStore } from "@/state/authStore";
-import { useRouter, usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const { setLoading, isLoading, isAuthenticated, user } = useAuthStore();
-  const { rotateRefreshToken } = useAuthApi();
-  const { fetchMe } = useUserApi();
-  const router = useRouter();
+  const { isLoading, isAuthenticated, user } = useAuthStore();
   const pathname = usePathname();
-  const initialized = useRef(false);
+  const router = useRouter();
 
+  // 1. Define Public Routes
+  const isPublicPath =
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname.startsWith("/verify-email");
+
+  // 2. Handle Authentication Redirect
   useEffect(() => {
-    const initializeApp = async () => {
-      if (initialized.current) return;
-      initialized.current = true;
-
-      // If already authenticated in this session, just stop loading
-      if (isAuthenticated) {
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        // This is where the SMTP/Server error might be hanging the request
-        await rotateRefreshToken();
-        await fetchMe();
-      } catch (error) {
-        console.error("Session recovery failed:", error);
-      } finally {
-        // FORCE loading to false so the UI can at least render
-        setLoading(false);
-      }
-    };
-
-    initializeApp();
-  }, [isAuthenticated, rotateRefreshToken, fetchMe, setLoading]);
-
-  useEffect(() => {
-    // 1. Don't redirect while we are still checking the session
-    if (isLoading) return;
-
-    // 2. Define Public Routes (Where users CAN go without being logged in)
-    const isPublicPath =
-      pathname === "/" ||
-      pathname === "/login" ||
-      pathname === "/register" ||
-      pathname.startsWith("/verify-email");
-
-    if (!isAuthenticated && !isPublicPath) {
+    if (!isLoading && !isAuthenticated && !isPublicPath) {
       router.push("/login");
     }
-  }, [isLoading, isAuthenticated, router, pathname]);
+  }, [isLoading, isAuthenticated, isPublicPath, router]);
 
-  if (isLoading) {
+  // 3. FULL-PAGE UNAUTHORIZED VIEW
+  // If user is logged in but trying to access admin without admin role
+  if (
+    !isLoading &&
+    isAuthenticated &&
+    pathname.startsWith("/admin") &&
+    user?.role !== "ADMIN"
+  ) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-zinc-950">
-        <div className="relative size-16">
-          <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20 border-t-emerald-500 animate-spin" />
+      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-center">
+        <div className="size-20 bg-red-500/10 rounded-full flex items-center justify-center border border-red-500/20 mb-6">
+          <ShieldAlert className="size-10 text-red-500" />
         </div>
-        <div className="mt-4 animate-pulse font-black text-emerald-500 uppercase tracking-widest text-xs italic">
-          Synchronizing Session...
-        </div>
+        <h1 className="text-4xl font-black text-white uppercase italic tracking-tighter mb-2">
+          Access <span className="text-red-500">Denied</span>
+        </h1>
+        <p className="text-zinc-500 max-w-sm mb-8 font-medium italic">
+          Your credentials do not have the required clearance for Platform
+          Governance. This attempt has been logged.
+        </p>
+        <Button
+          onClick={() => router.push("/dashboard")}
+          className="bg-zinc-100 text-zinc-950 hover:bg-white font-bold uppercase tracking-widest px-8 h-12 rounded-2xl"
+        >
+          Return to Base
+        </Button>
       </div>
     );
   }
 
+  // ... rest of your existing AuthProvider logic (Loading states, etc.)
   return <>{children}</>;
 };

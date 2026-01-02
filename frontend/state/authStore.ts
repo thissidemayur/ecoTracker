@@ -34,20 +34,22 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({
       accessToken: token,
       isAuthenticated: !!token,
+      isLoading: false,
     });
   },
 
   setUser: (userData: IUser | null) => {
     set({
       user: userData,
+      isLoading: false,
     });
   },
 
   setLoading: (isLoading: boolean) => set({ isLoading }),
 
-  updateUser: (userData) => set({ user: userData }),
+  updateUser: (userData) => set({ user: userData,isLoading:false }),
 
-  setAuthenticating: (isAuthenticating: boolean) => set({ isAuthenticating }),
+  setAuthenticating: (isAuthenticating: boolean) => set({ isAuthenticating ,isLoading:false}),
 
   clearAuth: () =>
     set({
@@ -55,6 +57,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       accessToken: null,
       isAuthenticated: false,
       isAuthenticating: false,
+      isLoading: false,
     }),
 }));
 
